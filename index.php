@@ -188,7 +188,7 @@ unset($methods);
 	</div>
 
 	<div class="pure-u-1-2 right">
-		<pre id="result"></pre>
+		<pre id="result" style="line-height:20px"></pre>
 	</div>
 </div>
 </body>
