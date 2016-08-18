@@ -5,7 +5,7 @@ error_reporting(E_ALL);
 
 function connect($host, $port, &$err = null)
 {
-    $conn = new FoolSock($host, $port);
+    $conn = new \FoolSock($host, $port);
     if ($conn === false) {
         $err = "$errstr ($errno)";
     }
@@ -15,7 +15,7 @@ function connect($host, $port, &$err = null)
 
 function servList($fd)
 {
-    if (!is_resource($fd)) {
+    if ($fd === false) {
         return [];
     }
     $serv_arr = _exec_cmd($fd, "ls", true);
@@ -30,7 +30,7 @@ function servList($fd)
 
 function invoke($fd, $serv, $method, array $args = [], $pretty_print = false)
 {
-    if (!is_resource($fd)) {
+    if ($fd === false) {
         return "无效连接~";
     }
     $arg_str = implode(", ", $args);
@@ -72,7 +72,7 @@ function endsWith($haystack, $needle)
 
 function _exec_cmd($fd, $cmd, $array = false)
 {
-    if (!is_resource($fd)) {
+    if ($fd === false) {
         return false;
     }
     $fd->write($cmd . "\n");
