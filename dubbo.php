@@ -75,7 +75,7 @@ function _exec_cmd($fd, $cmd, $array = false)
     if (!is_resource($fd)) {
         return false;
     }
-    $fd->send($cmd . "\n");
+    $fd->write($cmd . "\n");
 
     $receive = "";
     // 以dubbo>结尾判断数据包完整
