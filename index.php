@@ -94,7 +94,7 @@ if (isset($_POST["invoke"])) {
     exit;
 }
 
-$serv_list   = dubbo\serv_list($conn);
+$serv_list   = dubbo\servList($conn);
 $entity_json = [];
 foreach ($serv_list as $serv => &$methods) {
     foreach ($methods as &$method) {
