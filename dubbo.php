@@ -1,28 +1,28 @@
 <?php
-namespace xiaofeng\dubbo;
+namespace jiedaibao\dubbo;
 
 error_reporting(E_ALL);
 
-function connect($remote_socket, &$err = null)
+function connect($host, $port, &$err = null)
 {
-    $fd = stream_socket_client("tcp://$remote_socket", $errno, $errstr, 5);
-    stream_set_timeout($fd, 5, 0);
-    if ($fd === false) {
+    $conn = new FoolSock($host, $port);
+    if ($conn === false) {
         $err = "$errstr ($errno)";
     }
-    return $fd;
+    $conn->pconnect(100);
+    return $conn;
 }
 
-function serv_list($fd)
+function servList($fd)
 {
     if (!is_resource($fd)) {
         return [];
     }
     $serv_arr = _exec_cmd($fd, "ls", true);
-    $result = [];
+    $result   = [];
     foreach ($serv_arr as $serv) {
-        $serv = trim($serv);
-        $detail_arr = _exec_cmd($fd, "ls -l $serv", true);
+        $serv          = trim($serv);
+        $detail_arr    = _exec_cmd($fd, "ls -l $serv", true);
         $result[$serv] = array_map(function ($m) {return _method_parse($m);}, $detail_arr);
     }
     return $result;
@@ -46,14 +46,14 @@ function invoke($fd, $serv, $method, array $args = [], $pretty_print = false)
         }
 
         $result = json_decode($ret_arr[0], true);
-        if ($result===false||$result===true) {
+        if ($result === false || $result === true) {
             return $receive;
         }
-		$result = [
-			'result'=>json_decode($ret_arr[0], true),
-			'time'=>$ret_arr[1],
-		];
-        $pretty = json_readable_encode($result);
+        $result = [
+            'result' => json_decode($ret_arr[0], true),
+            'time'   => $ret_arr[1],
+        ];
+        $pretty = jsonReadableEncode($result);
         return $pretty;
     } else {
         return $receive;
@@ -75,12 +75,12 @@ function _exec_cmd($fd, $cmd, $array = false)
     if (!is_resource($fd)) {
         return false;
     }
-    fwrite($fd, trim($cmd) . "\n");
+    $fd->send($cmd);
 
     $receive = "";
     // 以dubbo>结尾判断数据包完整
     while (!endsWith($receive, "dubbo>")) {
-        $receive .= fread($fd, 1 << 13);
+        $receive .= $fd->read(1 << 13);
     }
 
     if ($array) {
@@ -99,7 +99,7 @@ function _method_parse($method_signature)
         return [
             "return" => $matches[1],
             "method" => $matches[2],
-            "args" => explode(",", $matches[3]),
+            "args"   => explode(",", $matches[3]),
         ];
     } else {
         // debug
@@ -108,48 +108,36 @@ function _method_parse($method_signature)
     return [];
 }
 
-function json_readable_encode($in, $indent = 0, $from_array = false)
+function jsonReadableEncode($in, $indent = 0, $from_array = false)
 {
     $_myself = __FUNCTION__;
-    $_escape = function ($str)
-    {
+    $_escape = function ($str) {
         return preg_replace("!([\b\t\n\r\f\"\\'])!", "\\\\\\1", $str);
     };
 
     $out = '';
 
-    foreach ($in as $key=>$value)
-    {
+    foreach ($in as $key => $value) {
         $out .= str_repeat("\t", $indent + 1);
-        $out .= "\"".$_escape((string)$key)."\": ";
+        $out .= "\"" . $_escape((string) $key) . "\": ";
 
-        if (is_object($value) || is_array($value))
-        {
+        if (is_object($value) || is_array($value)) {
             $out .= "\n";
             $out .= $_myself($value, $indent + 1);
-        }
-        elseif (is_bool($value))
-        {
+        } elseif (is_bool($value)) {
             $out .= $value ? 'true' : 'false';
-        }
-        elseif (is_null($value))
-        {
+        } elseif (is_null($value)) {
             $out .= 'null';
-        }
-        elseif (is_string($value))
-        {
-            $out .= "\"" . $_escape($value) ."\"";
-        }
-        else
-        {
+        } elseif (is_string($value)) {
+            $out .= "\"" . $_escape($value) . "\"";
+        } else {
             $out .= $value;
         }
 
         $out .= ",\n";
     }
 
-    if (!empty($out))
-    {
+    if (!empty($out)) {
         $out = substr($out, 0, -2);
     }
 
